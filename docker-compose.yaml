@@ -1,0 +1,37 @@
+version: '3.9'
+
+services:
+  db:
+    image: mysql:5.7
+    restart: always
+    command: --init-file /data/application/init.sql
+    volumes:
+        - ./database/init.sql:/data/application/init.sql
+    environment:
+      MYSQL_DATABASE: 'shorten_url'
+      MYSQL_USER: 'user'
+      MYSQL_PASSWORD: 'P@ssw0Rd'
+      MYSQL_ROOT_PASSWORD: 'r00T_P@ssw0Rd'
+    healthcheck:
+      test: "mysql -uroot -p$$MYSQL_ROOT_PASSWORD  -e 'SHOW databases'"
+      interval: 10s
+      retries: 3
+    ports:
+      - '3307:3306'
+    expose:
+      - '3307'
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 9000:9000
+    depends_on:
+      db:
+        condition: service_healthy
+    links:
+      - db
+    command: ["concurrently","npm:run-migration", "npm:start"]
+    volumes:
+      - ./:/usr/src/app
+    restart: always
